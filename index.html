@@ -627,12 +627,12 @@
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/019fe5ea-aa29-7e81-88ec-e2078bb63aae';
 
         const defaultSlides = [
-            { type: 'image', src: 'student life.png' },
-            { type: 'image', src: 'student life2.png' },
-            { type: 'image', src: 'student life 3.png' },
-            { type: 'image', src: 'student life 4.png' },
-            { type: 'image', src: 'student life 5.png' },
-            { type: 'image', src: 'student life6.png' }
+            { type: 'image', src: 'student%20life.png' },
+            { type: 'image', src: 'student%20life2.png' },
+            { type: 'image', src: 'student%20life%203.png' },
+            { type: 'image', src: 'student%20life%204.png' },
+            { type: 'image', src: 'student%20life%205.png' },
+            { type: 'image', src: 'student%20life6.png' }
         ];
 
         let activeMediaList = defaultSlides.slice();
@@ -657,12 +657,17 @@
 
         function applyGalleryData(data) {
             if (Array.isArray(data) && data.length > 0) {
-                const currentJson = JSON.stringify(data);
+                const customOnly = data.filter(item => !defaultSlides.some(d => d.src === item.src || decodeURIComponent(d.src) === item.src));
+                const combined = defaultSlides.concat(customOnly);
+                const currentJson = JSON.stringify(combined);
                 if (currentJson !== lastGalleryJson) {
                     lastGalleryJson = currentJson;
-                    activeMediaList = data;
+                    activeMediaList = combined;
                     renderStudentLifeSlideshow();
                 }
+            } else {
+                activeMediaList = defaultSlides.slice();
+                renderStudentLifeSlideshow();
             }
         }
 
