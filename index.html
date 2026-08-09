@@ -653,39 +653,61 @@
             }
         }
 
+        function getLocalSavedMedia() {
+            try {
+                const stored = localStorage.getItem('chaitanyaStudentLifeMedia');
+                return stored ? JSON.parse(stored) : [];
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function setLocalSavedMedia(mediaArray) {
+            try {
+                localStorage.setItem('chaitanyaStudentLifeMedia', JSON.stringify(mediaArray));
+            } catch(e) {}
+        }
+
         let lastGalleryJson = '';
 
-        function applyGalleryData(data) {
-            if (Array.isArray(data) && data.length > 0) {
-                const customOnly = data.filter(item => !defaultSlides.some(d => d.src === item.src || decodeURIComponent(d.src) === item.src));
-                const combined = defaultSlides.concat(customOnly);
-                const currentJson = JSON.stringify(combined);
-                if (currentJson !== lastGalleryJson) {
-                    lastGalleryJson = currentJson;
-                    activeMediaList = combined;
-                    renderStudentLifeSlideshow();
+        function mergeAndApplyMedia(cloudData) {
+            const localData = getLocalSavedMedia();
+            const rawList = [].concat(defaultSlides, localData, Array.isArray(cloudData) ? cloudData : []);
+            
+            const uniqueMap = new Map();
+            rawList.forEach(item => {
+                if (item && item.src && !uniqueMap.has(item.src)) {
+                    uniqueMap.set(item.src, item);
                 }
-            } else {
-                activeMediaList = defaultSlides.slice();
+            });
+
+            const merged = Array.from(uniqueMap.values());
+            const currentJson = JSON.stringify(merged);
+            if (currentJson !== lastGalleryJson) {
+                lastGalleryJson = currentJson;
+                activeMediaList = merged;
+                setLocalSavedMedia(merged);
                 renderStudentLifeSlideshow();
             }
         }
 
         function loadSyncedMedia() {
+            mergeAndApplyMedia([]);
+
             fetch('/api/gallery')
             .then(res => {
                 if (!res.ok) throw new Error();
                 return res.json();
             })
-            .then(data => applyGalleryData(data))
+            .then(data => mergeAndApplyMedia(data))
             .catch(() => {
                 fetch(CLOUD_SYNC_URL, { headers: { 'Accept': 'application/json' } })
                 .then(res => res.json())
-                .then(data => applyGalleryData(data))
+                .then(data => mergeAndApplyMedia(data))
                 .catch(() => {
                     fetch('gallery.json')
                     .then(res => res.json())
-                    .then(data => applyGalleryData(data))
+                    .then(data => mergeAndApplyMedia(data))
                     .catch(() => {});
                 });
             });
@@ -693,17 +715,15 @@
 
         function saveMediaToCloud(mediaArray) {
             activeMediaList = mediaArray;
-            try { localStorage.setItem('chaitanyaStudentLifeMedia', JSON.stringify(mediaArray)); } catch(e){}
+            setLocalSavedMedia(mediaArray);
             renderStudentLifeSlideshow();
 
-            // Try local Python server if available
             fetch('/api/upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gallery: mediaArray })
             }).catch(() => {});
 
-            // Cloud sync for Vercel / GitHub Pages / All Mobile Devices
             fetch(CLOUD_SYNC_URL, {
                 method: 'PUT',
                 headers: {
@@ -769,13 +789,13 @@
                     };
                     reader.readAsDataURL(file);
                 } else {
-                    compressImage(file, 900, 0.65, function(compressedUrl) {
+                    compressImage(file, 800, 0.6, function(compressedUrl) {
                         mediaArray.push({ type: 'image', src: compressedUrl });
                         loadedCount++;
                         if (loadedCount === files.length) {
                             saveMediaToCloud(mediaArray);
                             renderAdminMediaList();
-                            alert('✅ ఫోటోలు అప్‌లోడ్ అయ్యాయి! Vercel లో మరియు ఫోన్‌లలో లైవ్‌గా ప్రత్యక్షమవుతాయి.');
+                            alert('✅ ఫోటోలు సక్సెస్‌ఫుల్‌గా అప్‌లోడ్ అయ్యాయి! రిఫ్రెష్ చేసినా ఎప్పటికీ కనపడతాయి.');
                         }
                     });
                 }
@@ -786,6 +806,8 @@
             if (confirm('ఈ ఫోటో/వీడియో ని గ్యాలరీ నుండి తొలగించాలనుకుంటున్నారా?')) {
                 const mediaArray = activeMediaList.slice();
                 mediaArray.splice(index, 1);
+                activeMediaList = mediaArray;
+                setLocalSavedMedia(mediaArray);
                 saveMediaToCloud(mediaArray);
                 renderAdminMediaList();
                 alert('🗑️ ఫోటో/వీడియో తొలగించబడింది!');
