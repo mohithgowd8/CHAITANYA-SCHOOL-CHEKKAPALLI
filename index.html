@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chaitanya E.M. School | Chekkapalli</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+    <style>
+        :root {
+            --primary: #003366;
+            --secondary: #00c851;
+            --accent-orange: #ff8c00;
+            --gold: #fdb813;
+            --light-bg: #f8f9fa;
+        }
+
+        * {
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #ffffff;
+            color: #222;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        body.loading { overflow: hidden; }
+
+        /* Loader */
+        #site-loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            background: var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+            transition: transform 0.8s cubic-bezier(0.85, 0, 0.15, 1);
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #site-loader img {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .loader-name {
+            font-size: clamp(1.4rem, 5vw, 2.2rem);
+            font-weight: 900;
+            color: white;
+            letter-spacing: 0.08em;
+            display: flex; gap: 6px;
+            align-items: center;
+        }
+
+        .loader-name span {
+            opacity: 0;
+            animation: letterPop 0.5s ease forwards;
+        }
+
+        @keyframes letterPop {
+            0% { transform: translateY(30px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .loaded #site-loader { transform: translateY(-100%); }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            display: flex; justify-content: space-between;
+            align-items: center;
+            padding: 12px 6%;
+            z-index: 2000;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+        }
+
+        .brand {
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .brand img {
+            width: 42px; height: 42px; border-radius: 10px; object-fit: cover;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+
+        .brand h1 {
+            font-size: 1.05rem;
+            color: var(--primary);
+            line-height: 1.2;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .nav-links { display: flex; align-items: center; gap: 20px; }
+        .nav-links a {
+            text-decoration: none; color: var(--primary); font-weight: 700;
+            font-size: 0.95rem; transition: color 0.3s; cursor: pointer;
+        }
+        .nav-links a:hover { color: var(--accent-orange); }
+
+        .admission-btn {
+            background: var(--accent-orange);
+            color: white !important;
+            padding: 10px 22px;
+            border-radius: 50px;
+            display: inline-flex; align-items: center; gap: 8px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255,140,0,0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: none;
+        }
+
+        .admission-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255,140,0,0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 90vh;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 130px 6% 60px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%);
+            gap: 40px;
+        }
+
+        .hero-content { flex: 1.2; max-width: 650px; }
+        .hero-graphic { flex: 0.8; text-align: center; display: flex; justify-content: center; }
+
+        .telugu-quote {
+            color: var(--accent-orange); font-weight: 800; letter-spacing: 0.5px;
+            font-size: 1.15rem; margin-bottom: 8px;
+        }
+
+        .school-name {
+            font-size: clamp(2.4rem, 6vw, 4.5rem);
+            font-weight: 900; line-height: 1.05; margin: 10px 0 16px;
+        }
+
+        .blue { color: var(--primary); }
+        .green { color: var(--secondary); }
+
+        .hero-subtitle {
+            font-size: 1.15rem; color: #555; max-width: 520px; line-height: 1.5; margin-bottom: 24px;
+        }
+
+        /* Clock Logo Badge */
+        .clock-logo-box {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 380px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+        }
+
+        .clock-logo-outer-ring {
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 4px dashed rgba(0, 51, 102, 0.3);
+            box-shadow: 0 0 20px rgba(0, 200, 81, 0.15);
+            animation: clockRingSpin 40s linear infinite;
+        }
+
+        @keyframes clockRingSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .clock-logo-img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+            background: #ffffff;
+            padding: 8px;
+            box-shadow: 0 15px 40px rgba(0, 51, 102, 0.15), 0 0 25px rgba(255, 140, 0, 0.2);
+            transition: all 0.4s ease;
+            position: relative; z-index: 2;
+        }
+
+        /* Trust Section */
+        .trust-section {
+            background: var(--primary); padding: 70px 20px; color: white; text-align: center;
+        }
+        .trust-counter {
+            font-size: clamp(3rem, 12vw, 6rem); font-weight: 900; margin: 0; color: var(--gold); line-height: 1;
+        }
+        .trust-label {
+            letter-spacing: 4px; font-weight: 800; font-size: 0.95rem; margin-top: 10px;
+        }
+
+        /* Sections common styling */
+        .section-padding { padding: 70px 6%; }
+        .section-title {
+            text-align: center; color: var(--primary); font-size: clamp(1.8rem, 5vw, 2.5rem);
+            font-weight: 800; margin-bottom: 30px;
+        }
+
+        /* Slideshow */
+        .slideshow-container {
+            position: relative; width: 100%; max-width: 900px; height: 420px;
+            margin: 0 auto 16px; overflow: hidden; border-radius: 24px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.12); background: #f8f9fa;
+        }
+        .slide-img {
+            width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0;
+            opacity: 0; transition: opacity 0.8s ease; cursor: pointer; background: #f8f9fa;
+        }
+
+        /* Video Section */
+        .video-box {
+            max-width: 900px; margin: 0 auto; text-align: center;
+        }
+        .video-element {
+            width: 100%; max-height: 480px; border-radius: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+        .yt-btn-link {
+            display: inline-block; margin-top: 16px; background: #FF0000; color: white;
+            padding: 12px 26px; border-radius: 30px; font-weight: 700; text-decoration: none;
+            box-shadow: 0 4px 15px rgba(255,0,0,0.3);
+        }
+
+        /* Management Grid */
+        .leader-grid {
+            display: flex; justify-content: center; align-items: stretch; gap: 30px; flex-wrap: wrap;
+            max-width: 1100px; margin: 0 auto;
+        }
+
+        .leader-card {
+            background: white; padding: 35px 25px; border-radius: 28px; width: 300px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #eee;
+            transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: center;
+        }
+
+        .leader-card:hover {
+            transform: translateY(-8px); box-shadow: 0 20px 45px rgba(0, 51, 102, 0.12);
+        }
+
+        .principal-highlight {
+            border: 2.5px solid var(--gold); background: #fffdf5;
+            box-shadow: 0 15px 35px rgba(253, 184, 19, 0.2);
+        }
+
+        /* Teachers section */
+        .teachers-card {
+            width: 100%; max-width: 900px; margin: 0 auto; text-align: center;
+            background: #fafafa; border-radius: 24px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        .teachers-card img {
+            width: 100%; height: auto; display: block; border-radius: 16px; background: #fff;
+        }
+
+        /* Maps Box */
+        .map-box {
+            width: 100%; max-width: 1000px; margin: 0 auto; height: 350px;
+            border-radius: 28px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 6px solid #fff;
+        }
+
+        /* Floating Social Stack */
+        .social-float-container {
+            position: fixed; bottom: 25px; right: 25px;
+            display: flex; flex-direction: column; gap: 14px; z-index: 3000; align-items: center;
+        }
+
+        .social-float-btn {
+            width: 54px; height: 54px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25); position: relative;
+        }
+
+        .social-float-btn:hover { transform: scale(1.12) translateY(-2px); }
+
+        .social-float-btn.yt-btn { background: #FF0000; }
+        .social-float-btn.insta-btn { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%); }
+        .social-float-btn.wa-btn { background: #25d366; }
+        .social-float-btn img, .social-float-btn svg { width: 26px; height: 26px; fill: white; color: white; }
+
+        .social-tooltip {
+            position: absolute; right: 66px; background: rgba(0, 0, 0, 0.85); color: white;
+            padding: 6px 12px; border-radius: 8px; font-size: 0.82rem; white-space: nowrap;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; font-weight: 600;
+        }
+        .social-float-btn:hover .social-tooltip { opacity: 1; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 5000; padding: 20px;
+        }
+        .modal-card {
+            background: white; padding: 35px 25px; border-radius: 28px; width: 100%; max-width: 420px;
+            text-align: center; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        .modal-input {
+            width: 100%; padding: 14px 16px; margin: 10px 0;
+            border: 2px solid #eee; border-radius: 14px; font-size: 1rem; outline: none;
+        }
+        .modal-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 14px;
+            font-weight: 800; font-size: 1.05rem; cursor: pointer; margin-top: 10px;
+        }
+
+        /* 📱 Mobile Specific Styles (Max Width: 768px) */
+        @media (max-width: 768px) {
+            .header {
+                padding: 10px 16px !important;
+            }
+
+            .brand img {
+                width: 36px !important; height: 36px !important;
+            }
+
+            .brand h1 {
+                font-size: 0.85rem !important; white-space: normal !important; max-width: 150px;
+            }
+
+            .nav-links a:not(.admission-btn) { display: none !important; }
+
+            .admission-btn {
+                padding: 7px 16px !important; font-size: 0.82rem !important;
+            }
+
+            .hero {
+                flex-direction: column !important; text-align: center !important;
+                padding: 95px 20px 35px !important; gap: 20px !important; min-height: auto !important;
+            }
+
+            .hero-content, .hero-graphic {
+                flex: none !important; width: 100% !important; max-width: 100% !important;
+            }
+
+            .telugu-quote {
+                font-size: 0.95rem !important; margin-bottom: 6px !important;
+            }
+
+            .school-name {
+                font-size: 2.1rem !important; margin: 6px 0 12px !important;
+            }
+
+            .hero-subtitle {
+                font-size: 0.95rem !important; margin: 0 auto 16px !important;
+            }
+
+            .hero .admission-btn {
+                display: inline-flex !important; justify-content: center !important;
+                margin: 0 auto !important; padding: 12px 30px !important; font-size: 1rem !important;
+            }
+
+            .clock-logo-box {
+                max-width: 230px !important; margin: 15px auto 0 !important;
+            }
+            .clock-logo-outer-ring { inset: -10px !important; border-width: 3px !important; }
+
+            .section-padding { padding: 40px 16px !important; }
+            .section-title { font-size: 1.7rem !important; margin-bottom: 20px !important; }
+
+            .trust-section { padding: 40px 16px !important; }
+            .trust-counter { font-size: 3rem !important; }
+            .trust-label { font-size: 0.8rem !important; letter-spacing: 2px !important; }
+
+            .slideshow-container {
+                height: 220px !important; border-radius: 16px !important; margin-bottom: 12px !important;
+            }
+
+            .slideshow-container { height: 260px !important; border-radius: 18px !important; background: #111 !important; }
+            .slide-img { object-fit: cover !important; }
+
+            .video-element { max-height: 210px !important; border-radius: 16px !important; }
+            .yt-btn-link { padding: 10px 20px !important; font-size: 0.85rem !important; }
+
+            .leader-grid { gap: 16px !important; }
+            .leader-card {
+                width: 100% !important; max-width: 100% !important; padding: 24px 18px !important;
+            }
+            .principal-highlight { transform: none !important; }
+
+            .teachers-card { padding: 14px !important; border-radius: 16px !important; }
+
+            .map-box { height: 240px !important; border-width: 4px !important; border-radius: 20px !important; }
+
+            .social-float-container {
+                bottom: 16px !important; right: 16px !important; gap: 10px !important;
+            }
+            .social-float-btn { width: 46px !important; height: 46px !important; }
+            .social-float-btn img, .social-float-btn svg { width: 22px !important; height: 22px !important; }
+            .social-tooltip { display: none !important; }
+
+            .modal-card { padding: 25px 18px !important; border-radius: 22px !important; }
+
+            .admin-footer-link { display: none !important; }
+        }
+    </style>
+</head>
+<body class="loading">
+
+    <div id="site-loader">
+        <img src="school _logo.jpg" alt="Chaitanya EM School Logo">
+        <div class="loader-name" id="lName"></div>
+    </div>
+
+    <header class="header">
+        <div class="brand" aria-label="Chaitanya EM School">
+            <img src="school _logo.jpg" alt="Chaitanya EM School Logo">
+            <h1>Chaitanya E.M. School</h1>
+        </div>
+
+        <nav class="nav-links" aria-label="Main navigation">
+            <a href="#trust" onclick="animateCounter();">Trust</a>
+            <a href="#gallery">Gallery</a>
+            <a href="#video">Video</a>
+            <a href="#contacts">Contacts</a>
+            <a href="https://www.youtube.com/channel/UCWh3gZj27mLLFlvWPNqHpWg" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:5px; color:#FF0000; font-weight:700;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg> YouTube
+            </a>
+            <a href="https://www.instagram.com/maridhu.nagaraju/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:5px; color:#E1306C; font-weight:700;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> Instagram
+            </a>
+            <a class="admission-btn" onclick="openModal('admission-modal')" role="button" aria-label="Open admission form">
+                <img src="https://cdn-icons-png.flaticon.com/512/3449/3449692.png" width="18" style="filter: invert(1);" alt="Admission icon"> Admission
+            </a>
+        </nav>
+    </header>
+
+    <section class="hero" aria-label="School introduction">
+        <div class="hero-content">
+            <p class="telugu-quote">తల్లి లాంటి ప్రేమ, తండ్రి లాంటి బాధ్యత</p>
+            <h1 class="school-name">
+                <span class="blue">CHAITANYA</span><br>
+                <span class="green">E.M. SCHOOL</span>
+            </h1>
+            <p class="hero-subtitle">Experience premium education and personal care for your child's bright future.</p>
+            <a class="admission-btn" onclick="openModal('admission-modal')">Apply Now</a>
+        </div>
+        <div class="hero-graphic">
+            <div class="clock-logo-box">
+                <div class="clock-logo-outer-ring"></div>
+                <img src="school _logo.jpg" class="clock-logo-img" alt="Chaitanya E.M. School Logo - Planning, Implementation, Evaluation, Review" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <section id="trust" class="trust-section" onclick="animateCounter();" style="cursor: pointer;" aria-labelledby="trustCounter">
+        <h2 id="trustCounter" class="trust-counter">0</h2>
+        <p class="trust-label">HAPPY FAMILIES SINCE DAY ONE (CLICK TO ANIMATE)</p>
+    </section>
+
+    <section id="gallery" class="section-padding">
+        <h2 class="section-title">Student Life</h2>
+        <div id="student-slideshow" class="slideshow-container">
+            <img class="slide-img" src="student%20life.png" alt="Student life" style="opacity: 1;">
+            <img class="slide-img" src="student%20life2.png" alt="Student life" style="opacity: 0;">
+            <img class="slide-img" src="student%20life%203.png" alt="Student life" style="opacity: 0;">
+            <img class="slide-img" src="student%20life%204.png" alt="Student life" style="opacity: 0;">
+            <img class="slide-img" src="student%20life%205.png" alt="Student life" style="opacity: 0;">
+            <img class="slide-img" src="student%20life6.png" alt="Student life" style="opacity: 0;">
+        </div>
+        <p style="text-align:center; color:#666; font-size: 0.95rem;">Auto-plays every 3 seconds. Click image to go to next slide.</p>
+    </section>
+
+    <section id="video" class="section-padding" style="background: #f4f7fb;">
+        <h2 class="section-title">School Video</h2>
+        <div class="video-box">
+            <video controls autoplay muted loop playsinline class="video-element">
+                <source src="WhatsApp Video 2025-11-03 at 13.58.24_c7f4f380.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <p style="text-align: center; margin-top: 14px; color: #555; font-size: 0.95rem;">This is your local school video. For the full channel open the link below.</p>
+            <a href="https://www.youtube.com/channel/UCWh3gZj27mLLFlvWPNqHpWg" target="_blank" rel="noopener" class="yt-btn-link">Open Chaitanya School YouTube</a>
+        </div>
+    </section>
+
+    <section id="contacts" class="section-padding" style="background: var(--light-bg);">
+        <h2 class="section-title">Our Management</h2>
+        <div class="leader-grid">
+            <div class="leader-card principal-highlight">
+                <p style="color: var(--accent-orange); font-weight: bold; font-size: 0.8rem;">MANAGING DIRECTOR</p>
+                <h2 style="margin: 8px 0; color: var(--primary); font-size: 1.5rem;">Nagaraju</h2>
+                <p style="font-weight: 700; color: #444;">📞 +91 9491371708</p>
+            </div>
+
+            <div class="leader-card">
+                <p style="color: #999; font-weight: bold; font-size: 0.8rem;">VICE PRINCIPAL</p>
+                <h3 style="margin: 8px 0; color: var(--primary); font-size: 1.3rem;">Kesava</h3>
+                <p style="font-weight: 700; color: #444;">📞 +91 9010171355</p>
+            </div>
+
+            <div class="leader-card">
+                <p style="color: #999; font-weight: bold; font-size: 0.8rem;">DIRECTOR</p>
+                <h3 style="margin: 8px 0; color: var(--primary); font-size: 1.3rem;">Nagababu</h3>
+                <p style="font-weight: 700; color: #444;">📞 +91 9492568158</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="teachers" class="section-padding" style="background: #fff;">
+        <h2 class="section-title">Our Teachers</h2>
+        <div style="display: flex; justify-content: center; align-items: center;">
+            <div class="teachers-card">
+                <img src="faculty.png" alt="Faculty & Staff" loading="lazy">
+                <h3 style="margin: 16px 0 4px; color: var(--primary); font-size: 1.4rem;">BRAND STAFF</h3>
+                <p style="color: #666; font-size: 1rem;">Chaitanya gives you success</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-padding" style="padding-top: 20px;">
+        <div class="map-box">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15282.476442655823!2d80.64801535!3d16.7458145!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a35f377c8e9d5d5%3A0x7d6f5f3e9b1d7b1a!2sChekkapalli%2C%20Andhra%20Pradesh!5e0!3m2!1sen!2sin!4v1700000000000"
+                width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+    </div>
+
+    <div class="social-float-container" aria-label="Social contacts">
+        <a href="https://www.youtube.com/channel/UCWh3gZj27mLLFlvWPNqHpWg" target="_blank" rel="noopener" class="social-float-btn yt-btn" aria-label="YouTube Channel">
+            <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            <span class="social-tooltip">Open YouTube</span>
+        </a>
+        <a href="https://www.instagram.com/maridhu.nagaraju/" target="_blank" rel="noopener" class="social-float-btn insta-btn" aria-label="Instagram Page">
+            <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            <span class="social-tooltip">Instagram Page</span>
+        </a>
+        <a onclick="openWhatsApp()" class="social-float-btn wa-btn" aria-label="Chat via WhatsApp" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')openWhatsApp()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp icon">
+            <span class="social-tooltip">WhatsApp Us</span>
+        </a>
+    </div>
+
+    <div id="admission-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="admission-heading">
+        <div class="modal-card">
+            <h2 id="admission-heading" style="color: var(--primary); margin-bottom: 6px;">Admission Request</h2>
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 14px;">Start your child's journey with us</p>
+            <input id="studentNameInput" type="text" class="modal-input" placeholder="Student Name" aria-label="Student Name">
+            <input id="parentPhoneInput" type="tel" class="modal-input" placeholder="Parent Contact Number" aria-label="Parent Contact Number">
+            <button class="modal-btn" style="background: var(--accent-orange); color: white;" onclick="submitAdmission()">Submit Request</button>
+            <p onclick="closeModal('admission-modal')" style="margin-top:15px; cursor:pointer; color:#888; font-weight: 600;">Close</p>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-login-heading">
+        <div class="modal-card">
+            <h2 id="admin-login-heading" style="color: var(--primary); margin-bottom: 6px;">Chaitanya Admin Portal</h2>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 14px;">Laptop / Desktop Upload Access Only</p>
+            <input id="adminPasswordInput" type="password" class="modal-input" placeholder="Enter Password" aria-label="Admin Password">
+            <button class="modal-btn" style="background: var(--primary); color: white;" onclick="verifyAdminPassword()">Login to Upload</button>
+            <p onclick="closeModal('admin-login-modal')" style="margin-top:15px; cursor:pointer; color:#888; font-weight: 600;">Cancel</p>
+        </div>
+    </div>
+
+    <!-- Admin Upload Manager Modal -->
+    <div id="admin-upload-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-upload-heading">
+        <div class="modal-card" style="max-width: 550px; text-align: left;">
+            <h2 id="admin-upload-heading" style="color: var(--primary); margin-bottom: 6px; text-align: center;">Student Life Media Manager</h2>
+            <p style="color: #666; font-size: 0.88rem; margin-bottom: 16px; text-align: center;">Upload photos or videos to automatically update Student Life section across all devices</p>
+
+            <div style="border: 2px dashed var(--primary); padding: 20px; border-radius: 16px; text-align: center; background: #f0f4f8; margin-bottom: 18px;">
+                <input type="file" id="mediaFileInput" accept="image/*,video/*" multiple style="display: none;" onchange="handleMediaUpload(event)">
+                <label for="mediaFileInput" style="background: var(--accent-orange); color: white; padding: 10px 22px; border-radius: 50px; cursor: pointer; font-weight: bold; display: inline-block;">
+                    📁 Select Photo / Video from Laptop
+                </label>
+                <p style="color: #777; font-size: 0.82rem; margin-top: 10px;">Select one or multiple images/videos from your computer.</p>
+            </div>
+
+            <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 10px;">Current Gallery Items:</h3>
+            <div id="adminMediaList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; padding: 10px; background: #fafafa; border-radius: 12px; border: 1px solid #eee;"></div>
+
+            <div style="text-align: center; margin-top: 18px;">
+                <button class="modal-btn" style="background: #25d366; color: white; width: auto; padding: 10px 28px; display: inline-block;" onclick="saveAndApplyMedia()">Done & Update Live Site</button>
+                <p onclick="closeModal('admin-upload-modal')" style="margin-top:10px; cursor:pointer; color:#888; font-weight: 600; text-align: center;">Close</p>
+            </div>
+        </div>
+    </div>
+
+    <footer style="background: #111; color: white; padding: 35px 20px; text-align: center;">
+        <p style="font-size: 0.95rem;">© 2026 Chaitanya E.M. School, Chekkapalli.</p>
+        <p class="admin-footer-link" style="margin-top: 10px;">
+            <a href="#" onclick="checkAndOpenAdminModal(); return false;" style="color: #777; font-size: 0.82rem; text-decoration: none; font-weight: 600; opacity: 0.85;">🔒 Chaitanya Admin</a>
+        </p>
+    </footer>
+
+    <script>
+        const brand = "CHAITANYA";
+        const lName = document.getElementById('lName');
+        brand.split('').forEach((char, i) => {
+            const span = document.createElement('span');
+            span.innerText = char;
+            span.style.animationDelay = `${i * 0.1}s`;
+            lName.appendChild(span);
+        });
+
+        function closeLoader() {
+            if (document.body.classList.contains('loaded')) return;
+            document.body.classList.remove('loading');
+            document.body.classList.add('loaded');
+            setTimeout(animateCounter, 300);
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(closeLoader, 2000);
+        });
+
+        setTimeout(() => {
+            if (document.body.classList.contains('loading')) closeLoader();
+        }, 4000);
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        const ADMIN_PASS = 'chaitanya2015';
+        const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/019fe5ea-aa29-7e81-88ec-e2078bb63aae';
+
+        const defaultSlides = [
+            { type: 'image', src: 'student life.png' },
+            { type: 'image', src: 'student life2.png' },
+            { type: 'image', src: 'student life 3.png' },
+            { type: 'image', src: 'student life 4.png' },
+            { type: 'image', src: 'student life 5.png' },
+            { type: 'image', src: 'student life6.png' }
+        ];
+
+        let activeMediaList = defaultSlides.slice();
+
+        function checkAndOpenAdminModal() {
+            openModal('admin-login-modal');
+        }
+
+        function verifyAdminPassword() {
+            const pass = document.getElementById('adminPasswordInput').value.trim();
+            if (pass === ADMIN_PASS) {
+                closeModal('admin-login-modal');
+                document.getElementById('adminPasswordInput').value = '';
+                openModal('admin-upload-modal');
+                renderAdminMediaList();
+            } else {
+                alert('❌ Invalid Password! దయచేసి సరైన పాస్‌వర్డ్ (chaitanya2015) నమోదు చేయండి.');
+            }
+        }
+
+        let lastGalleryJson = '';
+
+        function applyGalleryData(data) {
+            if (Array.isArray(data) && data.length > 0) {
+                const currentJson = JSON.stringify(data);
+                if (currentJson !== lastGalleryJson) {
+                    lastGalleryJson = currentJson;
+                    activeMediaList = data;
+                    renderStudentLifeSlideshow();
+                }
+            }
+        }
+
+        function loadSyncedMedia() {
+            fetch('/api/gallery')
+            .then(res => {
+                if (!res.ok) throw new Error();
+                return res.json();
+            })
+            .then(data => applyGalleryData(data))
+            .catch(() => {
+                fetch('gallery.json')
+                .then(res => res.json())
+                .then(data => applyGalleryData(data))
+                .catch(() => {});
+            });
+        }
+
+        function handleMediaUpload(event) {
+            const files = event.target.files;
+            if (!files || !files.length) return;
+
+            const formData = new FormData();
+            Array.from(files).forEach(file => {
+                formData.append('files', file);
+            });
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.gallery)) {
+                    activeMediaList = data.gallery;
+                    renderAdminMediaList();
+                    renderStudentLifeSlideshow();
+                    alert('✅ ఫోటోలు/వీడియోలు సర్వర్‌కి విజయవంతంగా అప్‌లోడ్ అయ్యాయి! ఫోన్‌లలో మరియు వెబ్‌సైట్‌లో లైవ్‌గా అప్‌డేట్ అయ్యాయి.');
+                }
+            })
+            .catch(err => {
+                alert('Upload failed. Please try again.');
+            });
+        }
+
+        function deleteMediaItem(index) {
+            if (confirm('ఈ ఫోటో/వీడియో ని గ్యాలరీ నుండి తొలగించాలనుకుంటున్నారా?')) {
+                fetch('/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index: index })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.gallery)) {
+                        activeMediaList = data.gallery;
+                        renderAdminMediaList();
+                        renderStudentLifeSlideshow();
+                    }
+                });
+            }
+        }
+
+        setInterval(loadSyncedMedia, 15000);
+
+        function renderAdminMediaList() {
+            const container = document.getElementById('adminMediaList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            activeMediaList.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.style.cssText = 'position: relative; border-radius: 8px; overflow: hidden; height: 80px; background: #eee;';
+
+                if (item.type === 'video') {
+                    card.innerHTML = `<video src="${item.src}" style="width:100%; height:100%; object-fit:cover;"></video>`;
+                } else {
+                    card.innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover;">`;
+                }
+
+                const delBtn = document.createElement('button');
+                delBtn.innerText = '✕';
+                delBtn.title = 'Delete Media';
+                delBtn.style.cssText = 'position: absolute; top: 4px; right: 4px; background: #ff0000; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 20px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);';
+                delBtn.onclick = function() { deleteMediaItem(index); };
+                card.appendChild(delBtn);
+
+                container.appendChild(card);
+            });
+        }
+
+        let slideTimer = null;
+        function renderStudentLifeSlideshow() {
+            const container = document.getElementById('student-slideshow');
+            if (!container) return;
+            if (slideTimer) clearInterval(slideTimer);
+
+            container.innerHTML = '';
+
+            activeMediaList.forEach((item, idx) => {
+                const safeSrc = encodeURI(item.src);
+                if (item.type === 'video') {
+                    const video = document.createElement('video');
+                    video.className = 'slide-img';
+                    video.src = safeSrc;
+                    video.autoplay = true;
+                    video.muted = true;
+                    video.loop = true;
+                    video.playsInline = true;
+                    video.style.opacity = idx === 0 ? '1' : '0';
+                    container.appendChild(video);
+                } else {
+                    const img = document.createElement('img');
+                    img.className = 'slide-img';
+                    img.src = safeSrc;
+                    img.alt = 'Student life';
+                    img.style.opacity = idx === 0 ? '1' : '0';
+                    container.appendChild(img);
+                }
+            });
+
+            const slides = Array.from(container.querySelectorAll('.slide-img'));
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((el, i) => {
+                    el.style.opacity = i === index ? '1' : '0';
+                    if (el.tagName === 'VIDEO') {
+                        if (i === index) el.play().catch(()=>{});
+                        else el.pause();
+                    }
+                });
+            }
+
+            slides.forEach(el => {
+                el.addEventListener('click', () => {
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    showSlide(currentSlide);
+                });
+            });
+
+            if (slides.length) {
+                showSlide(0);
+                slideTimer = setInterval(() => {
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    showSlide(currentSlide);
+                }, 3000);
+            }
+        }
+
+        function saveAndApplyMedia() {
+            renderStudentLifeSlideshow();
+            closeModal('admin-upload-modal');
+        }
+
+        loadSyncedMedia();
+
+        function submitAdmission() {
+            const studentName = document.getElementById('studentNameInput').value.trim();
+            const parentPhone = document.getElementById('parentPhoneInput').value.trim();
+            if (!studentName || !parentPhone) {
+                alert('దయచేసి విద్యార్థి పేరు మరియు తల్లిదండ్రుల ఫోన్ నంబర్ నమోదు చేయండి.');
+                return;
+            }
+
+            const messageText = `*Chaitanya E.M. School - Admission Request*\n\n` +
+                                `👤 *Student Name:* ${studentName}\n` +
+                                `📞 *Parent Contact:* ${parentPhone}\n\n` +
+                                `I would like to enquire about school admission for my child.`;
+
+            const whatsappUrl = `https://wa.me/918341371708?text=${encodeURIComponent(messageText)}`;
+
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            }
+
+            window.open(whatsappUrl, '_blank');
+
+            document.getElementById('studentNameInput').value = '';
+            document.getElementById('parentPhoneInput').value = '';
+            closeModal('admission-modal');
+        }
+
+        function openWhatsApp() {
+            const defaultText = 'Hello Chaitanya E.M. School, I am interested in admission details.';
+            const whatsappUrl = `https://wa.me/918341371708?text=${encodeURIComponent(defaultText)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        let countInterval = null;
+        let observerTriggered = false;
+
+        function animateCounter() {
+            const display = document.getElementById('trustCounter');
+            if (!display) return;
+
+            if (countInterval) clearInterval(countInterval);
+
+            let count = 0;
+            const target = 2000;
+            const duration = 1800;
+            const steps = 45;
+            const stepTime = duration / steps;
+            const increment = target / steps;
+
+            display.innerText = "0";
+
+            display.style.transform = "scale(1.15)";
+            display.style.transition = "transform 0.25s ease";
+            setTimeout(() => { display.style.transform = "scale(1)"; }, 250);
+
+            countInterval = setInterval(() => {
+                count += increment;
+                if (count >= target) {
+                    count = target;
+                    display.innerText = `${count}+`;
+                    clearInterval(countInterval);
+                } else {
+                    display.innerText = `${Math.floor(count)}+`;
+                }
+            }, stepTime);
+        }
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !observerTriggered) {
+                    observerTriggered = true;
+                    animateCounter();
+                }
+            }, { threshold: 0.1 });
+            const trustTarget = document.getElementById('trust');
+            if (trustTarget) observer.observe(trustTarget);
+        }
+
+        function checkScrollMobile() {
+            if (observerTriggered) return;
+            const trustTarget = document.getElementById('trust');
+            if (!trustTarget) return;
+            const rect = trustTarget.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                observerTriggered = true;
+                animateCounter();
+            }
+        }
+
+        window.addEventListener('scroll', checkScrollMobile, { passive: true });
+        window.addEventListener('touchmove', checkScrollMobile, { passive: true });
+        window.addEventListener('load', checkScrollMobile);
+        setTimeout(checkScrollMobile, 500);
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeModal('admission-modal');
+                closeModal('admin-login-modal');
+                closeModal('admin-upload-modal');
+            }
+        });
+    </script>
+</body>
+</html>
