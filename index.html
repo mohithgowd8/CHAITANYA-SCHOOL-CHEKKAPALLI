@@ -562,7 +562,7 @@
         <div class="modal-card">
             <h2 id="admin-login-heading" style="color: var(--primary); margin-bottom: 6px;">Chaitanya Admin Portal</h2>
             <p style="color: #666; font-size: 0.9rem; margin-bottom: 14px;">Laptop / Desktop Upload Access Only</p>
-            <input id="adminPasswordInput" type="password" class="modal-input" placeholder="Enter Password" aria-label="Admin Password">
+            <input id="adminPasswordInput" type="password" class="modal-input" placeholder="Enter Password" aria-label="Admin Password" onkeydown="if(event.key==='Enter')verifyAdminPassword()">
             <button class="modal-btn" style="background: var(--primary); color: white;" onclick="verifyAdminPassword()">Login to Upload</button>
             <p onclick="closeModal('admin-login-modal')" style="margin-top:15px; cursor:pointer; color:#888; font-weight: 600;">Cancel</p>
         </div>
@@ -672,6 +672,20 @@
             { type: 'image', src: 'student_life_5.png' },
             { type: 'image', src: 'student_life_6.png' }
         ];
+
+        function verifyAdminPassword() {
+            const input = document.getElementById('adminPasswordInput');
+            if (!input) return;
+            const pass = input.value.trim();
+            if (pass === ADMIN_PASS) {
+                closeModal('admin-login-modal');
+                input.value = '';
+                openModal('admin-upload-modal');
+                renderAdminMediaList();
+            } else {
+                alert('❌ తప్పు పాస్‌వర్డ్! దయచేసి సరైన పాస్‌వర్డ్ నమోదు చేయండి.');
+            }
+        }
 
         let customMediaList = [];
         let activeMediaList = defaultSlides.slice();
