@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chaitanya E.M. School | Chekkapalli</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+    <!-- Google Firebase SDK for Live Cross-Device Realtime Sync -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
         :root {
             --primary: #003366;
@@ -625,6 +628,26 @@
 
         const ADMIN_PASS = 'chaitanya2015';
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/019fe5ea-aa29-7e81-88ec-e2078bb63aae';
+        const FIREBASE_REST_URL = 'https://chaitanya-school-gallery-default-rtdb.firebaseio.com/gallery.json';
+
+        // Google Firebase Realtime Database Integration
+        let firebaseDb = null;
+        try {
+            if (typeof firebase !== 'undefined') {
+                firebase.initializeApp({
+                    databaseURL: "https://chaitanya-school-gallery-default-rtdb.firebaseio.com"
+                });
+                firebaseDb = firebase.database();
+                firebaseDb.ref('gallery').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && Array.isArray(data)) {
+                        applySyncedGallery(data);
+                    }
+                });
+            }
+        } catch(e) {
+            console.log('Firebase SDK init fallback');
+        }
 
         const defaultSlides = [
             { type: 'image', src: 'student_life_1.png' },
@@ -679,44 +702,57 @@
         }
 
         function loadSyncedMedia() {
-            fetch('/api/gallery?t=' + Date.now())
-            .then(res => res.json())
-            .then(data => applySyncedGallery(data))
-            .catch(() => {
-                fetch(CLOUD_SYNC_URL + '?t=' + Date.now())
+            if (firebaseDb) {
+                firebaseDb.ref('gallery').once('value').then(snapshot => {
+                    const data = snapshot.val();
+                    if (data && Array.isArray(data)) applySyncedGallery(data);
+                }).catch(fetchFallback);
+            } else {
+                fetchFallback();
+            }
+
+            function fetchFallback() {
+                fetch(FIREBASE_REST_URL + '?t=' + Date.now())
                 .then(res => res.json())
                 .then(data => applySyncedGallery(data))
                 .catch(() => {
-                    fetch('gallery.json')
+                    fetch('/api/gallery?t=' + Date.now())
                     .then(res => res.json())
                     .then(data => applySyncedGallery(data))
-                    .catch(() => {});
+                    .catch(() => {
+                        fetch(CLOUD_SYNC_URL + '?t=' + Date.now())
+                        .then(res => res.json())
+                        .then(data => applySyncedGallery(data))
+                        .catch(() => {});
+                    });
                 });
-            });
+            }
         }
 
         function saveMediaToCloud(mediaArray) {
             activeMediaList = mediaArray;
             renderStudentLifeSlideshow();
 
+            // 1. Firebase Realtime Database SDK (0.1s instant WebSocket update across all phones)
+            if (firebaseDb) {
+                firebaseDb.ref('gallery').set(mediaArray).catch(() => {});
+            }
+
+            // 2. Firebase REST API
+            fetch(FIREBASE_REST_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mediaArray)
+            }).catch(() => {});
+
+            // 3. Vercel Serverless Function
             fetch('/api/gallery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gallery: mediaArray })
-            })
-            .then(() => {
-                setTimeout(loadSyncedMedia, 500);
-            })
-            .catch(() => {
-                fetch(CLOUD_SYNC_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(mediaArray)
-                }).catch(() => {});
-            });
+            }).catch(() => {});
+
+            setTimeout(loadSyncedMedia, 500);
         }
 
         function compressImage(file, maxWidth, quality, callback) {
