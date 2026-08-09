@@ -672,7 +672,7 @@
                 openModal('admin-upload-modal');
                 renderAdminMediaList();
             } else {
-                alert('❌ Invalid Password! దయచేసి సరైన పాస్‌వర్డ్ (chaitanya2015) నమోదు చేయండి.');
+                alert('❌ తప్పు పాస్‌వర్డ్! దయచేసి సరైన పాస్‌వర్డ్ నమోదు చేయండి.');
             }
         }
 
@@ -946,7 +946,7 @@
             container.innerHTML = '';
 
             activeMediaList.forEach((item, idx) => {
-                const safeSrc = encodeURI(item.src);
+                const safeSrc = item.src;
                 if (item.type === 'video') {
                     const video = document.createElement('video');
                     video.className = 'slide-img';
