@@ -716,6 +716,8 @@
             }
         }
 
+        const FIRESTORE_REST_URL = 'https://firestore.googleapis.com/v1/projects/chaitanya-school-42b25/databases/(default)/documents/school_gallery/student_life';
+
         function loadSyncedMedia() {
             if (firestoreDb) {
                 firestoreDb.collection('school_gallery').doc('student_life').get().then((doc) => {
@@ -728,19 +730,19 @@
             }
 
             function fetchFallback() {
-                fetch('/api/gallery?t=' + Date.now())
+                fetch(FIRESTORE_REST_URL + '?t=' + Date.now())
                 .then(res => res.json())
-                .then(data => applySyncedGallery(data))
+                .then(data => {
+                    if (data && data.fields && data.fields.itemsJson && data.fields.itemsJson.stringValue) {
+                        const parsed = JSON.parse(data.fields.itemsJson.stringValue);
+                        if (Array.isArray(parsed)) applySyncedGallery(parsed);
+                    }
+                })
                 .catch(() => {
-                    fetch(CLOUD_SYNC_URL + '?t=' + Date.now())
+                    fetch('/api/gallery?t=' + Date.now())
                     .then(res => res.json())
                     .then(data => applySyncedGallery(data))
-                    .catch(() => {
-                        fetch('gallery.json')
-                        .then(res => res.json())
-                        .then(data => applySyncedGallery(data))
-                        .catch(() => {});
-                    });
+                    .catch(() => {});
                 });
             }
         }
@@ -749,29 +751,32 @@
             activeMediaList = mediaArray;
             renderStudentLifeSlideshow();
 
-            // Direct write to Google Cloud Firestore Collection: 'school_gallery' -> Document: 'student_life'
+            // 1. Direct Write to Firestore SDK
             if (firestoreDb) {
                 firestoreDb.collection('school_gallery').doc('student_life').set({
                     items: mediaArray,
+                    itemsJson: JSON.stringify(mediaArray),
                     updatedAt: new Date().toISOString()
-                }).catch(err => console.log('Firestore write error:', err));
+                }).catch(err => console.log('Firestore write info:', err));
             }
 
-            // Vercel Serverless Function API
+            // 2. Direct Write to Firestore REST API
+            const firestorePayload = {
+                fields: {
+                    itemsJson: { stringValue: JSON.stringify(mediaArray) }
+                }
+            };
+            fetch(FIRESTORE_REST_URL, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(firestorePayload)
+            }).catch(() => {});
+
+            // 3. Vercel Serverless Function API
             fetch('/api/gallery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gallery: mediaArray })
-            }).catch(() => {});
-
-            // Cloud Blob Backup
-            fetch(CLOUD_SYNC_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(mediaArray)
             }).catch(() => {});
         }
 

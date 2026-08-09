@@ -1,4 +1,6 @@
-let memoryGallery = [
+const FIRESTORE_REST_URL = 'https://firestore.googleapis.com/v1/projects/chaitanya-school-42b25/databases/(default)/documents/school_gallery/student_life';
+
+let memoryCache = [
   { type: 'image', src: 'student_life_1.png' },
   { type: 'image', src: 'student_life_2.png' },
   { type: 'image', src: 'student_life_3.png' },
@@ -6,8 +8,6 @@ let memoryGallery = [
   { type: 'image', src: 'student_life_5.png' },
   { type: 'image', src: 'student_life_6.png' }
 ];
-
-const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fe645-ebee-744b-b148-de57692728e2';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -30,37 +30,37 @@ export default async function handler(req, res) {
     }
     const gallery = body && body.gallery ? body.gallery : body;
     if (Array.isArray(gallery) && gallery.length > 0) {
-      memoryGallery = gallery;
+      memoryCache = gallery;
       try {
-        await fetch(BLOB_URL, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(gallery)
+        const firestorePayload = {
+          fields: {
+            itemsJson: { stringValue: JSON.stringify(gallery) }
+          }
+        };
+        await fetch(FIRESTORE_REST_URL, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(firestorePayload)
         });
-      } catch (err) {
-        console.error('Blob sync error:', err);
-      }
+      } catch(e) {}
     }
-    return res.status(200).json({ success: true, gallery: memoryGallery });
+    return res.status(200).json({ success: true, gallery: memoryCache });
   }
 
   // GET Request
   try {
-    const cloudRes = await fetch(BLOB_URL, {
-      headers: { 'Accept': 'application/json' }
-    });
-    if (cloudRes.ok) {
-      const data = await cloudRes.json();
-      if (Array.isArray(data) && data.length > 0) {
-        memoryGallery = data;
+    const fsRes = await fetch(FIRESTORE_REST_URL);
+    if (fsRes.ok) {
+      const data = await fsRes.json();
+      if (data && data.fields && data.fields.itemsJson && data.fields.itemsJson.stringValue) {
+        const parsed = JSON.parse(data.fields.itemsJson.stringValue);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryCache = parsed;
+          return res.status(200).json(parsed);
+        }
       }
     }
-  } catch (err) {
-    console.error('Blob fetch error:', err);
-  }
+  } catch(e) {}
 
-  return res.status(200).json(memoryGallery);
+  return res.status(200).json(memoryCache);
 }
