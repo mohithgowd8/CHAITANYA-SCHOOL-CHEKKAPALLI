@@ -738,33 +738,28 @@
             .catch(() => {});
         }
 
-        function compressImage(file, maxWidth, quality, callback) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+        function uploadFileToCloudCDN(file, callback) {
+            const formData = new FormData();
+            formData.append('reqtype', 'fileupload');
+            formData.append('fileToUpload', file);
 
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                    callback(compressedDataUrl);
-                };
-                img.onerror = function() { callback(e.target.result); };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+            fetch('https://catbox.moe/user/api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.text())
+            .then(url => {
+                if (url && url.startsWith('http')) {
+                    callback(url.trim());
+                } else {
+                    throw new Error('Cloud CDN error');
+                }
+            })
+            .catch(() => {
+                compressImage(file, 800, 0.6, function(compressedUrl) {
+                    callback(compressedUrl);
+                });
+            });
         }
 
         function handleMediaUpload(event) {
@@ -773,32 +768,24 @@
 
             const mediaArray = activeMediaList.slice();
             let loadedCount = 0;
+            const totalFiles = files.length;
+
+            alert('⏳ ఫోటోలు/వీడియోలు క్లౌడ్‌కి అప్‌లోడ్ అవుతున్నాయి... దయచేసి కొన్ని సెకన్లు వేచి ఉండండి.');
 
             Array.from(files).forEach(file => {
                 const isVideo = file.type.startsWith('video/');
-                if (isVideo) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        mediaArray.push({ type: 'video', src: e.target.result });
-                        loadedCount++;
-                        if (loadedCount === files.length) {
-                            saveMediaToCloud(mediaArray);
-                            renderAdminMediaList();
-                            alert('✅ వీడియో అప్‌లోడ్ అయ్యింది! Vercel లో మరియు ఫోన్‌లలో లైవ్‌గా ప్రత్యక్షమవుతుంది.');
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    compressImage(file, 800, 0.6, function(compressedUrl) {
-                        mediaArray.push({ type: 'image', src: compressedUrl });
-                        loadedCount++;
-                        if (loadedCount === files.length) {
-                            saveMediaToCloud(mediaArray);
-                            renderAdminMediaList();
-                            alert('✅ ఫోటోలు సక్సెస్‌ఫుల్‌గా అప్‌లోడ్ అయ్యాయి! రిఫ్రెష్ చేసినా ఎప్పటికీ కనపడతాయి.');
-                        }
+                uploadFileToCloudCDN(file, function(cdnUrl) {
+                    mediaArray.push({
+                        type: isVideo ? 'video' : 'image',
+                        src: cdnUrl
                     });
-                }
+                    loadedCount++;
+                    if (loadedCount === totalFiles) {
+                        saveMediaToCloud(mediaArray);
+                        renderAdminMediaList();
+                        alert('✅ ఫోటోలు/వీడియోలు సక్సెస్‌ఫుల్‌గా అప్‌లోడ్ అయ్యాయి! Vercel లో మరియు అన్ని ఫోన్‌లలో అందరికీ కనిపించేలా లైవ్‌గా అప్‌డేట్ అయ్యాయి.');
+                    }
+                });
             });
         }
 
