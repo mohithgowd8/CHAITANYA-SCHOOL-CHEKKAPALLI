@@ -674,59 +674,120 @@
             })
             .then(data => applyGalleryData(data))
             .catch(() => {
-                fetch('gallery.json')
+                fetch(CLOUD_SYNC_URL, { headers: { 'Accept': 'application/json' } })
                 .then(res => res.json())
                 .then(data => applyGalleryData(data))
-                .catch(() => {});
+                .catch(() => {
+                    fetch('gallery.json')
+                    .then(res => res.json())
+                    .then(data => applyGalleryData(data))
+                    .catch(() => {});
+                });
             });
+        }
+
+        function saveMediaToCloud(mediaArray) {
+            activeMediaList = mediaArray;
+            try { localStorage.setItem('chaitanyaStudentLifeMedia', JSON.stringify(mediaArray)); } catch(e){}
+            renderStudentLifeSlideshow();
+
+            // Try local Python server if available
+            fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gallery: mediaArray })
+            }).catch(() => {});
+
+            // Cloud sync for Vercel / GitHub Pages / All Mobile Devices
+            fetch(CLOUD_SYNC_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(mediaArray)
+            })
+            .then(() => {
+                loadSyncedMedia();
+            })
+            .catch(() => {});
+        }
+
+        function compressImage(file, maxWidth, quality, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    callback(compressedDataUrl);
+                };
+                img.onerror = function() { callback(e.target.result); };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function handleMediaUpload(event) {
             const files = event.target.files;
             if (!files || !files.length) return;
 
-            const formData = new FormData();
-            Array.from(files).forEach(file => {
-                formData.append('files', file);
-            });
+            const mediaArray = activeMediaList.slice();
+            let loadedCount = 0;
 
-            fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.gallery)) {
-                    activeMediaList = data.gallery;
-                    renderAdminMediaList();
-                    renderStudentLifeSlideshow();
-                    alert('✅ ఫోటోలు/వీడియోలు సర్వర్‌కి విజయవంతంగా అప్‌లోడ్ అయ్యాయి! ఫోన్‌లలో మరియు వెబ్‌సైట్‌లో లైవ్‌గా అప్‌డేట్ అయ్యాయి.');
+            Array.from(files).forEach(file => {
+                const isVideo = file.type.startsWith('video/');
+                if (isVideo) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        mediaArray.push({ type: 'video', src: e.target.result });
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            saveMediaToCloud(mediaArray);
+                            renderAdminMediaList();
+                            alert('✅ వీడియో అప్‌లోడ్ అయ్యింది! Vercel లో మరియు ఫోన్‌లలో లైవ్‌గా ప్రత్యక్షమవుతుంది.');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    compressImage(file, 900, 0.65, function(compressedUrl) {
+                        mediaArray.push({ type: 'image', src: compressedUrl });
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            saveMediaToCloud(mediaArray);
+                            renderAdminMediaList();
+                            alert('✅ ఫోటోలు అప్‌లోడ్ అయ్యాయి! Vercel లో మరియు ఫోన్‌లలో లైవ్‌గా ప్రత్యక్షమవుతాయి.');
+                        }
+                    });
                 }
-            })
-            .catch(err => {
-                alert('Upload failed. Please try again.');
             });
         }
 
         function deleteMediaItem(index) {
             if (confirm('ఈ ఫోటో/వీడియో ని గ్యాలరీ నుండి తొలగించాలనుకుంటున్నారా?')) {
-                fetch('/api/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index: index })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success && Array.isArray(data.gallery)) {
-                        activeMediaList = data.gallery;
-                        renderAdminMediaList();
-                        renderStudentLifeSlideshow();
-                    }
-                });
+                const mediaArray = activeMediaList.slice();
+                mediaArray.splice(index, 1);
+                saveMediaToCloud(mediaArray);
+                renderAdminMediaList();
+                alert('🗑️ ఫోటో/వీడియో తొలగించబడింది!');
             }
         }
 
-        setInterval(loadSyncedMedia, 15000);
+        setInterval(loadSyncedMedia, 10000);
 
         function renderAdminMediaList() {
             const container = document.getElementById('adminMediaList');
