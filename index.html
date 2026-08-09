@@ -673,39 +673,21 @@
             { type: 'image', src: 'student_life_6.png' }
         ];
 
+        let customMediaList = [];
         let activeMediaList = defaultSlides.slice();
-
-        function checkAndOpenAdminModal() {
-            openModal('admin-login-modal');
-        }
-
-        function verifyAdminPassword() {
-            const pass = document.getElementById('adminPasswordInput').value.trim();
-            if (pass === ADMIN_PASS) {
-                closeModal('admin-login-modal');
-                document.getElementById('adminPasswordInput').value = '';
-                openModal('admin-upload-modal');
-                renderAdminMediaList();
-            } else {
-                alert('❌ తప్పు పాస్‌వర్డ్! దయచేసి సరైన పాస్‌వర్డ్ నమోదు చేయండి.');
-            }
-        }
-
         let lastGalleryJson = '';
 
         function applySyncedGallery(cloudList) {
             if (!Array.isArray(cloudList)) cloudList = [];
 
-            const rawList = [].concat(defaultSlides, cloudList);
-            const uniqueMap = new Map();
-            rawList.forEach(item => {
-                if (item && item.src && !uniqueMap.has(item.src)) {
-                    uniqueMap.set(item.src, item);
-                }
-            });
+            const customOnly = cloudList.filter(item => 
+                item && item.src && !defaultSlides.some(d => d.src === item.src)
+            );
 
-            const merged = Array.from(uniqueMap.values());
+            customMediaList = customOnly;
+            const merged = defaultSlides.concat(customOnly);
             const currentJson = JSON.stringify(merged);
+
             if (currentJson !== lastGalleryJson) {
                 lastGalleryJson = currentJson;
                 activeMediaList = merged;
@@ -721,8 +703,9 @@
         function loadSyncedMedia() {
             if (firestoreDb) {
                 firestoreDb.collection('school_gallery').doc('student_life').get().then((doc) => {
-                    if (doc.exists && doc.data() && Array.isArray(doc.data().items)) {
-                        applySyncedGallery(doc.data().items);
+                    if (doc.exists && doc.data()) {
+                        const raw = doc.data().items || [];
+                        applySyncedGallery(raw);
                     }
                 }).catch(fetchFallback);
             } else {
@@ -747,15 +730,18 @@
             }
         }
 
-        function saveMediaToCloud(mediaArray) {
-            activeMediaList = mediaArray;
+        function saveMediaToCloud(updatedCustomList) {
+            customMediaList = updatedCustomList;
+            activeMediaList = defaultSlides.concat(customMediaList);
+            lastGalleryJson = JSON.stringify(activeMediaList);
+
             renderStudentLifeSlideshow();
+            renderAdminMediaList();
 
             // 1. Direct Write to Firestore SDK
             if (firestoreDb) {
                 firestoreDb.collection('school_gallery').doc('student_life').set({
-                    items: mediaArray,
-                    itemsJson: JSON.stringify(mediaArray),
+                    items: customMediaList,
                     updatedAt: new Date().toISOString()
                 }).catch(err => console.log('Firestore write info:', err));
             }
@@ -763,7 +749,7 @@
             // 2. Direct Write to Firestore REST API
             const firestorePayload = {
                 fields: {
-                    itemsJson: { stringValue: JSON.stringify(mediaArray) }
+                    itemsJson: { stringValue: JSON.stringify(customMediaList) }
                 }
             };
             fetch(FIRESTORE_REST_URL, {
@@ -776,7 +762,7 @@
             fetch('/api/gallery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ gallery: mediaArray })
+                body: JSON.stringify({ gallery: customMediaList })
             }).catch(() => {});
         }
 
@@ -899,39 +885,39 @@
             const files = event.target.files;
             if (!files || !files.length) return;
 
-            const mediaArray = activeMediaList.slice();
+            const updatedCustomList = customMediaList.slice();
             let loadedCount = 0;
             const totalFiles = files.length;
-
-            alert('⏳ ఫోటోలు/వీడియోలు క్లౌడ్‌కి అప్‌లోడ్ అవుతున్నాయి... దయచేసి కొన్ని సెకన్లు వేచి ఉండండి.');
 
             Array.from(files).forEach(file => {
                 const isVideo = file.type.startsWith('video/');
                 uploadFileToCloudCDN(file, function(cdnUrl) {
-                    mediaArray.push({
+                    updatedCustomList.push({
                         type: isVideo ? 'video' : 'image',
                         src: cdnUrl
                     });
                     loadedCount++;
                     if (loadedCount === totalFiles) {
-                        saveMediaToCloud(mediaArray);
-                        renderAdminMediaList();
-                        alert('✅ ఫోటోలు/వీడియోలు సక్సెస్‌ఫుల్‌గా అప్‌లోడ్ అయ్యాయి! Vercel లో మరియు అన్ని ఫోన్‌లలో అందరికీ కనిపించేలా లైవ్‌గా అప్‌డేట్ అయ్యాయి.');
+                        saveMediaToCloud(updatedCustomList);
+                        alert('✅ ఫోటోలు/వీడియోలు విజయవంతంగా అప్‌లోడ్ అయ్యాయి!');
                     }
                 });
             });
+            event.target.value = '';
         }
 
         function deleteMediaItem(index) {
-            if (confirm('ఈ ఫోటో/వీడియో ని గ్యాలరీ నుండి తొలగించాలనుకుంటున్నారా?')) {
-                const mediaArray = activeMediaList.slice();
-                mediaArray.splice(index, 1);
-                activeMediaList = mediaArray;
-                setLocalSavedMedia(mediaArray);
-                saveMediaToCloud(mediaArray);
-                renderAdminMediaList();
-                alert('🗑️ ఫోటో/వీడియో తొలగించబడింది!');
+            if (!confirm('ఈ ఫోటో/వీడియో ని గ్యాలరీ నుండి తొలగించాలనుకుంటున్నారా?')) return;
+
+            if (index < defaultSlides.length) {
+                defaultSlides.splice(index, 1);
+            } else {
+                const customIndex = index - defaultSlides.length;
+                customMediaList.splice(customIndex, 1);
             }
+
+            saveMediaToCloud(customMediaList);
+            alert('🗑️ ఫోటో/వీడియో విజయవంతంగా తొలగించబడింది!');
         }
 
         setInterval(loadSyncedMedia, 10000);
