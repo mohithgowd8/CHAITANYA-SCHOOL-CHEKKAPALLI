@@ -630,7 +630,7 @@
         const ADMIN_PASS = 'chaitanya2015';
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/019fe5ea-aa29-7e81-88ec-e2078bb63aae';
 
-        // User's updated Google Firebase Project Credentials (chaitanya-school-42b25)
+        // User's Google Cloud Firestore Project Credentials (chaitanya-school-42b25)
         const firebaseConfig = {
             apiKey: "AIzaSyBQk0H8YbdEq5msF4byIdnVZTb8dHRSiio",
             authDomain: "chaitanya-school-42b25.firebaseapp.com",
@@ -642,7 +642,6 @@
         };
 
         let firestoreDb = null;
-        let firebaseRtdb = null;
 
         try {
             if (typeof firebase !== 'undefined') {
@@ -650,9 +649,8 @@
                     firebase.initializeApp(firebaseConfig);
                 }
                 firestoreDb = firebase.firestore();
-                firebaseRtdb = firebase.database();
 
-                // 1. Realtime Firestore WebSocket listener
+                // Live Cloud Firestore Realtime Listener
                 firestoreDb.collection('school_gallery').doc('student_life').onSnapshot((doc) => {
                     if (doc.exists) {
                         const data = doc.data();
@@ -660,18 +658,10 @@
                             applySyncedGallery(data.items);
                         }
                     }
-                }, (err) => console.log('Firestore snapshot listener info:', err));
-
-                // 2. Realtime Database WebSocket listener
-                firebaseRtdb.ref('student_life_gallery').on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data && Array.isArray(data)) {
-                        applySyncedGallery(data);
-                    }
-                }, (err) => console.log('RTDB listener info:', err));
+                }, (err) => console.log('Firestore snapshot info:', err));
             }
         } catch(e) {
-            console.log('Firebase init note:', e);
+            console.log('Firestore init note:', e);
         }
 
         const defaultSlides = [
@@ -759,27 +749,22 @@
             activeMediaList = mediaArray;
             renderStudentLifeSlideshow();
 
-            // 1. Update Firestore Realtime Doc
+            // Direct write to Google Cloud Firestore Collection: 'school_gallery' -> Document: 'student_life'
             if (firestoreDb) {
                 firestoreDb.collection('school_gallery').doc('student_life').set({
                     items: mediaArray,
                     updatedAt: new Date().toISOString()
-                }).catch(err => console.log('Firestore write info:', err));
+                }).catch(err => console.log('Firestore write error:', err));
             }
 
-            // 2. Update Firebase Realtime Database
-            if (firebaseRtdb) {
-                firebaseRtdb.ref('student_life_gallery').set(mediaArray).catch(err => console.log('RTDB write info:', err));
-            }
-
-            // 3. Update Vercel Serverless Function API
+            // Vercel Serverless Function API
             fetch('/api/gallery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gallery: mediaArray })
             }).catch(() => {});
 
-            // 4. Update Cloud Blob Backup
+            // Cloud Blob Backup
             fetch(CLOUD_SYNC_URL, {
                 method: 'PUT',
                 headers: {
