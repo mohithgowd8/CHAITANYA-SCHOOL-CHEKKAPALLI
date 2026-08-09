@@ -653,27 +653,12 @@
             }
         }
 
-        function getLocalSavedMedia() {
-            try {
-                const stored = localStorage.getItem('chaitanyaStudentLifeMedia');
-                return stored ? JSON.parse(stored) : [];
-            } catch(e) {
-                return [];
-            }
-        }
-
-        function setLocalSavedMedia(mediaArray) {
-            try {
-                localStorage.setItem('chaitanyaStudentLifeMedia', JSON.stringify(mediaArray));
-            } catch(e) {}
-        }
-
         let lastGalleryJson = '';
 
-        function mergeAndApplyMedia(cloudData) {
-            const localData = getLocalSavedMedia();
-            const rawList = [].concat(defaultSlides, localData, Array.isArray(cloudData) ? cloudData : []);
-            
+        function applySyncedGallery(cloudList) {
+            if (!Array.isArray(cloudList)) cloudList = [];
+
+            const rawList = [].concat(defaultSlides, cloudList);
             const uniqueMap = new Map();
             rawList.forEach(item => {
                 if (item && item.src && !uniqueMap.has(item.src)) {
@@ -686,36 +671,30 @@
             if (currentJson !== lastGalleryJson) {
                 lastGalleryJson = currentJson;
                 activeMediaList = merged;
-                setLocalSavedMedia(merged);
                 renderStudentLifeSlideshow();
+                if (document.getElementById('admin-upload-modal') && document.getElementById('admin-upload-modal').style.display !== 'none') {
+                    renderAdminMediaList();
+                }
             }
         }
 
         function loadSyncedMedia() {
-            mergeAndApplyMedia([]);
-
-            fetch('/api/gallery')
-            .then(res => {
-                if (!res.ok) throw new Error();
-                return res.json();
+            fetch(CLOUD_SYNC_URL + '?cacheBust=' + Date.now(), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
             })
-            .then(data => mergeAndApplyMedia(data))
+            .then(res => res.json())
+            .then(data => applySyncedGallery(data))
             .catch(() => {
-                fetch(CLOUD_SYNC_URL, { headers: { 'Accept': 'application/json' } })
+                fetch('gallery.json')
                 .then(res => res.json())
-                .then(data => mergeAndApplyMedia(data))
-                .catch(() => {
-                    fetch('gallery.json')
-                    .then(res => res.json())
-                    .then(data => mergeAndApplyMedia(data))
-                    .catch(() => {});
-                });
+                .then(data => applySyncedGallery(data))
+                .catch(() => {});
             });
         }
 
         function saveMediaToCloud(mediaArray) {
             activeMediaList = mediaArray;
-            setLocalSavedMedia(mediaArray);
             renderStudentLifeSlideshow();
 
             fetch('/api/upload', {
@@ -733,7 +712,7 @@
                 body: JSON.stringify(mediaArray)
             })
             .then(() => {
-                loadSyncedMedia();
+                setTimeout(loadSyncedMedia, 500);
             })
             .catch(() => {});
         }
