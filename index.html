@@ -679,17 +679,19 @@
         }
 
         function loadSyncedMedia() {
-            fetch(CLOUD_SYNC_URL + '?cacheBust=' + Date.now(), {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
-            })
+            fetch('/api/gallery?t=' + Date.now())
             .then(res => res.json())
             .then(data => applySyncedGallery(data))
             .catch(() => {
-                fetch('gallery.json')
+                fetch(CLOUD_SYNC_URL + '?t=' + Date.now())
                 .then(res => res.json())
                 .then(data => applySyncedGallery(data))
-                .catch(() => {});
+                .catch(() => {
+                    fetch('gallery.json')
+                    .then(res => res.json())
+                    .then(data => applySyncedGallery(data))
+                    .catch(() => {});
+                });
             });
         }
 
@@ -697,24 +699,24 @@
             activeMediaList = mediaArray;
             renderStudentLifeSlideshow();
 
-            fetch('/api/upload', {
+            fetch('/api/gallery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gallery: mediaArray })
-            }).catch(() => {});
-
-            fetch(CLOUD_SYNC_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(mediaArray)
             })
             .then(() => {
                 setTimeout(loadSyncedMedia, 500);
             })
-            .catch(() => {});
+            .catch(() => {
+                fetch(CLOUD_SYNC_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(mediaArray)
+                }).catch(() => {});
+            });
         }
 
         function compressImage(file, maxWidth, quality, callback) {
